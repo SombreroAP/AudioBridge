@@ -49,7 +49,8 @@
                 <Border Style="{StaticResource CardPanel}">
                     <StackPanel>
                         <TextBlock Style="{StaticResource Heading}" Text="2 · The other PC" />
-                        <ComboBox ItemsSource="{Binding Peers}" SelectedItem="{Binding SelectedPeer, Mode=TwoWay}"
+                        <ComboBox x:Name="PeerCombo" ItemsSource="{Binding Peers}"
+                                  SelectedItem="{Binding SelectedPeer, Mode=TwoWay}"
                                   IsEnabled="{Binding IsIdle}" />
                         <TextBlock Style="{StaticResource Hint}" Margin="0,12,0,0"
                                    Text="Not showing up? Windows Firewall blocks the search by default. Click below on BOTH PCs, then wait a few seconds." />

@@ -42,10 +42,106 @@
             <Setter Property="Margin" Value="0,0,0,12" />
         </Style>
 
+        <!-- The default ComboBox draws its popup on a white background, and the app-wide
+             TextBlock style paints text light, so list items were near-invisible. Both the
+             closed box and the popup are templated here to stay on the dark palette. -->
+        <Style x:Key="ComboToggle" TargetType="ToggleButton">
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ToggleButton">
+                        <Border x:Name="Shell" Background="#0E1015" BorderBrush="{StaticResource CardBorder}"
+                                BorderThickness="1" CornerRadius="6">
+                            <Path x:Name="Arrow" Data="M0,0 L8,0 L4,5 Z" Fill="{StaticResource Muted}"
+                                  HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,12,0" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Shell" Property="BorderBrush" Value="{StaticResource Accent}" />
+                            </Trigger>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="Shell" Property="BorderBrush" Value="{StaticResource Accent}" />
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="Shell" Property="Opacity" Value="0.5" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style TargetType="ComboBoxItem">
+            <Setter Property="Foreground" Value="{StaticResource Text}" />
+            <Setter Property="FontFamily" Value="Segoe UI" />
+            <Setter Property="Padding" Value="10,7" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ComboBoxItem">
+                        <Border x:Name="Shell" Background="Transparent" CornerRadius="4"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsHighlighted" Value="True">
+                                <Setter TargetName="Shell" Property="Background" Value="#2B3550" />
+                            </Trigger>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="Shell" Property="Background" Value="#1D2740" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
         <Style TargetType="ComboBox">
             <Setter Property="FontFamily" Value="Segoe UI" />
-            <Setter Property="Padding" Value="6,4" />
+            <Setter Property="FontSize" Value="13" />
+            <Setter Property="Foreground" Value="{StaticResource Text}" />
             <Setter Property="Margin" Value="0,4,0,0" />
+            <Setter Property="MinHeight" Value="32" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ComboBox">
+                        <Grid>
+                            <ToggleButton x:Name="Toggle" Focusable="False" ClickMode="Press"
+                                          Style="{StaticResource ComboToggle}"
+                                          IsChecked="{Binding IsDropDownOpen, Mode=TwoWay,
+                                                      RelativeSource={RelativeSource TemplatedParent}}" />
+                            <ContentPresenter x:Name="Selection" IsHitTestVisible="False"
+                                              Content="{TemplateBinding SelectionBoxItem}"
+                                              ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}"
+                                              ContentTemplateSelector="{TemplateBinding ItemTemplateSelector}"
+                                              Margin="12,0,32,0" VerticalAlignment="Center"
+                                              HorizontalAlignment="Left" />
+                            <TextBlock x:Name="Placeholder" Text="Nothing found yet" Margin="12,0,32,0"
+                                       VerticalAlignment="Center" Foreground="{StaticResource Muted}"
+                                       Visibility="Collapsed" IsHitTestVisible="False" />
+                            <Popup x:Name="Popup" Placement="Bottom" Focusable="False" AllowsTransparency="True"
+                                   IsOpen="{TemplateBinding IsDropDownOpen}" PopupAnimation="Fade">
+                                <Border Background="{StaticResource Card}" BorderBrush="{StaticResource CardBorder}"
+                                        BorderThickness="1" CornerRadius="6" Padding="4" Margin="0,4,0,0"
+                                        MinWidth="{Binding ActualWidth, RelativeSource={RelativeSource TemplatedParent}}"
+                                        MaxHeight="{TemplateBinding MaxDropDownHeight}">
+                                    <ScrollViewer>
+                                        <StackPanel IsItemsHost="True"
+                                                    KeyboardNavigation.DirectionalNavigation="Contained" />
+                                    </ScrollViewer>
+                                </Border>
+                            </Popup>
+                        </Grid>
+                        <ControlTemplate.Triggers>
+                            <!-- Say so explicitly rather than showing an empty box that looks broken. -->
+                            <Trigger Property="HasItems" Value="False">
+                                <Setter TargetName="Placeholder" Property="Visibility" Value="Visible" />
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="Selection" Property="Opacity" Value="0.5" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
         </Style>
 
         <Style TargetType="TextBox">

@@ -297,6 +297,24 @@ public sealed class MainViewModel : INotifyPropertyChanged, IAsyncDisposable
                  $"•  buffer {buffered:F0} ms  •  {status.Jitter.ConcealedPackets:N0} dropouts";
     }
 
+    /// <summary>
+    /// Set AUDIOBRIDGE_DEMO=1 to populate the lists with sample entries. A build machine has
+    /// no sound card and no peers, so without this there is nothing on screen to review and
+    /// UI changes ship unseen.
+    /// </summary>
+    private static bool DemoMode => Environment.GetEnvironmentVariable("AUDIOBRIDGE_DEMO") == "1";
+
+    private void AddDemoContent()
+    {
+        RenderDevices.Add(new AudioDeviceInfo("demo-1", "Speakers (Realtek(R) Audio)", true));
+        RenderDevices.Add(new AudioDeviceInfo("demo-2", "HyperX Cloud II (USB Audio)", false));
+        RenderDevices.Add(new AudioDeviceInfo("demo-3", "CABLE Input (VB-Audio Virtual Cable)", false));
+        CaptureDevices.Add(new AudioDeviceInfo("demo-4", "Shure SM7B (Scarlett Solo USB)", true));
+        CaptureDevices.Add(new AudioDeviceInfo("demo-5", "Microphone (HyperX Cloud II)", false));
+        Peers.Add(new Peer(Guid.NewGuid(), "STREAM-PC", new IPEndPoint(IPAddress.Parse("192.168.10.42"), 47810), PeerRole.StreamingPc));
+        Peers.Add(new Peer(Guid.NewGuid(), "GAMING-RIG", new IPEndPoint(IPAddress.Parse("192.168.10.17"), 47810), PeerRole.GamingPc));
+    }
+
     private void RefreshDevices()
     {
         try
@@ -305,6 +323,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IAsyncDisposable
             foreach (var device in WindowsAudioDevices.GetRenderDevices()) RenderDevices.Add(device);
             CaptureDevices.Clear();
             foreach (var device in WindowsAudioDevices.GetCaptureDevices()) CaptureDevices.Add(device);
+            if (DemoMode) AddDemoContent();
             RecheckCable();
         }
         catch (Exception ex)

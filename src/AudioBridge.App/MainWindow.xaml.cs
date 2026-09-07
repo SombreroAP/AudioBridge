@@ -29,6 +29,15 @@ public partial class MainWindow : Window
         }
     }
 
+    /// <summary>In preview mode, drop the list open so a screenshot captures the popup
+    /// itself rather than just the closed control.</summary>
+    protected override void OnContentRendered(EventArgs e)
+    {
+        base.OnContentRendered(e);
+        if (Environment.GetEnvironmentVariable("AUDIOBRIDGE_DEMO") == "1")
+            PeerCombo.IsDropDownOpen = true;
+    }
+
     private void OpenCableSite(object sender, RoutedEventArgs e)
     {
         if (_viewModel is null) return;

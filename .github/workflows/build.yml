@@ -56,6 +56,31 @@ jobs:
             exit 1
           }
 
+      - name: Screenshot the UI
+        shell: pwsh
+        # Development happens on macOS where the UI cannot be run, so this is the only place
+        # a visual change can actually be looked at before it ships.
+        run: |
+          $env:AUDIOBRIDGE_DEMO = '1'
+          $process = Start-Process -FilePath publish\AudioBridge.exe -PassThru
+          Start-Sleep -Seconds 12
+
+          Add-Type -AssemblyName System.Windows.Forms, System.Drawing
+          $bounds = [System.Windows.Forms.Screen]::PrimaryScreen.Bounds
+          $bitmap = New-Object System.Drawing.Bitmap $bounds.Width, $bounds.Height
+          $graphics = [System.Drawing.Graphics]::FromImage($bitmap)
+          $graphics.CopyFromScreen($bounds.Location, [System.Drawing.Point]::Empty, $bounds.Size)
+          New-Item -ItemType Directory -Force -Path screenshots | Out-Null
+          $bitmap.Save("$PWD\screenshots\ui.png")
+          Write-Host "Captured $($bounds.Width)x$($bounds.Height)"
+
+          if (-not $process.HasExited) { Stop-Process -Id $process.Id -Force }
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: screenshots
+          path: screenshots/
+
       - uses: actions/upload-artifact@v4
         with:
           name: AudioBridge
