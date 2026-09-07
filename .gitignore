@@ -7,3 +7,4 @@ TestResults/
 .DS_Store
 publish/
 ci-artifact/
+shots/
