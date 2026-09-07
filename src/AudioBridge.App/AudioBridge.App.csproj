@@ -6,6 +6,7 @@
     <AssemblyName>AudioBridge</AssemblyName>
     <RootNamespace>AudioBridge.App</RootNamespace>
     <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>..\..\assets\AudioBridge.ico</ApplicationIcon>
     <!-- Ships as one self-contained .exe so testers just copy and run it. -->
     <PublishSingleFile>true</PublishSingleFile>
     <SelfContained>true</SelfContained>
