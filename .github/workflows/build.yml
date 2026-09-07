@@ -38,6 +38,16 @@ jobs:
           }
           $process.Refresh()
           Write-Host "Still running after 15s. Main window title: '$($process.MainWindowTitle)'"
+
+          # Closing the window must hide to the tray, not quit: the app is meant to run for
+          # a whole gaming session with no window in the way.
+          $process.CloseMainWindow() | Out-Null
+          Start-Sleep -Seconds 3
+          if ($process.HasExited) {
+            Write-Error "Closing the window exited the app; it should have gone to the tray."
+            exit 1
+          }
+          Write-Host "Closing the window kept the app running (tray behaviour OK)."
           Stop-Process -Id $process.Id -Force
 
           # Starting is not the same as starting cleanly. Errors are caught and shown in the

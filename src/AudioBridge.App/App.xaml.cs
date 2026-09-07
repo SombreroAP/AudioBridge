@@ -6,8 +6,22 @@ namespace AudioBridge.App;
 
 public partial class App : Application
 {
+    // Held for the life of the process so a second launch can tell the first is running.
+    private Mutex? _singleInstance;
+
     protected override void OnStartup(StartupEventArgs e)
     {
+        _singleInstance = new Mutex(true, @"Local\AudioBridge.SingleInstance", out var first);
+        if (!first)
+        {
+            // Two copies would fight over the audio port and the microphone. Most likely the
+            // user closed the window to the tray and forgot.
+            MessageBox.Show("AudioBridge is already running -- look for its icon in the system tray.",
+                "AudioBridge", MessageBoxButton.OK, MessageBoxImage.Information);
+            Shutdown();
+            return;
+        }
+
         // Install these before anything else runs, so even a failure inside MainWindow's
         // constructor produces a visible message rather than a silent exit.
         DispatcherUnhandledException += OnDispatcherException;
@@ -40,6 +54,12 @@ public partial class App : Application
             Log.Write("Unhandled exception", exception);
             Report(exception);
         }
+    }
+
+    protected override void OnExit(ExitEventArgs e)
+    {
+        _singleInstance?.Dispose();
+        base.OnExit(e);
     }
 
     private static void Report(Exception exception) =>

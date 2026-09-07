@@ -3,6 +3,8 @@
     <OutputType>WinExe</OutputType>
     <TargetFramework>net10.0-windows</TargetFramework>
     <UseWPF>true</UseWPF>
+    <!-- Only for NotifyIcon; WPF has no tray icon of its own. -->
+    <UseWindowsForms>true</UseWindowsForms>
     <AssemblyName>AudioBridge</AssemblyName>
     <RootNamespace>AudioBridge.App</RootNamespace>
     <ApplicationManifest>app.manifest</ApplicationManifest>
@@ -17,6 +19,11 @@
     <DebugType>none</DebugType>
     <Version>0.1.0</Version>
   </PropertyGroup>
+  <ItemGroup>
+    <!-- UseWindowsForms adds a global using that makes 'Application' and 'MessageBox'
+         ambiguous with WPF's. Only TrayIcon.cs needs WinForms, and it imports it itself. -->
+    <Using Remove="System.Windows.Forms" />
+  </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\AudioBridge.Core\AudioBridge.Core.csproj" />
     <ProjectReference Include="..\AudioBridge.Windows\AudioBridge.Windows.csproj" />
