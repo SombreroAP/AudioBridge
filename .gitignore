@@ -6,3 +6,4 @@ publish/
 TestResults/
 .DS_Store
 publish/
+ci-artifact/

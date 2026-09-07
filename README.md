@@ -37,9 +37,16 @@ WPF setup wizard) come next and target `net10.0-windows`.
 ## Building
 
 ```
-dotnet test          # core logic, any OS
-dotnet build         # full solution, Windows only
+dotnet test              # core logic, runs on any OS
+scripts/publish.sh       # compile-check + tests, macOS/Linux
+scripts\publish.ps1      # the real build, Windows only
 ```
 
-Test builds are published as a self-contained single-file `.exe` to the shared
-`AudioBridge` folder on Google Drive.
+**The shippable `.exe` must be built on Windows.** `EnableWindowsTargeting` in
+`Directory.Build.props` lets the whole solution — WPF included — compile on macOS, which
+keeps day-to-day development working there, but a WPF binary produced that way does not
+run. `.github/workflows/build.yml` builds it on `windows-latest`, smoke-tests that the app
+is still alive with an open window 15 seconds after launch, and uploads the `.exe` as an
+artifact. That artifact is what goes to the Google Drive test folder.
+
+If the app ever fails at startup, it writes to `%LOCALAPPDATA%\AudioBridge\log.txt`.
