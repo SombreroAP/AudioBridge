@@ -306,6 +306,9 @@ public sealed class MainViewModel : INotifyPropertyChanged, IAsyncDisposable
 
     private void AddDemoContent()
     {
+        // Pick a role so the role-dependent cards (virtual microphone, device labels) render.
+        if (_role == PeerRole.Unconfigured) _role = PeerRole.GamingPc;
+
         RenderDevices.Add(new AudioDeviceInfo("demo-1", "Speakers (Realtek(R) Audio)", true));
         RenderDevices.Add(new AudioDeviceInfo("demo-2", "HyperX Cloud II (USB Audio)", false));
         RenderDevices.Add(new AudioDeviceInfo("demo-3", "CABLE Input (VB-Audio Virtual Cable)", false));

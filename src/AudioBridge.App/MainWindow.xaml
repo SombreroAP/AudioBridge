@@ -67,35 +67,10 @@
                     </StackPanel>
                 </Border>
 
-                <!-- Step 3: VB-CABLE, gaming PC only -->
-                <Border Style="{StaticResource CardPanel}"
-                        Visibility="{Binding NeedsCable, Converter={StaticResource BoolToVisibility}}">
-                    <StackPanel>
-                        <TextBlock Style="{StaticResource Heading}" Text="3 · Virtual microphone" />
-                        <TextBlock Text="{Binding CableStatus}" />
-
-                        <StackPanel Visibility="{Binding CableMissing, Converter={StaticResource BoolToVisibility}}"
-                                    Margin="0,10,0,0">
-                            <TextBlock Style="{StaticResource Hint}"
-                                       Text="To make your streaming PC's microphone show up in games on this PC, Windows needs a virtual audio device. AudioBridge uses VB-CABLE for this." />
-                            <TextBlock Style="{StaticResource Hint}" Margin="0,8,0,0"
-                                       Text="{Binding CableAttribution}" />
-                            <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
-                                <Button Style="{StaticResource LinkButton}" Content="Open vb-cable.com"
-                                        Click="OpenCableSite" Margin="0,0,16,0" />
-                                <Button Style="{StaticResource LinkButton}" Content="I've installed it — check again"
-                                        Command="{Binding RecheckCableCommand}" />
-                            </StackPanel>
-                            <TextBlock Style="{StaticResource Hint}" Margin="0,10,0,0" Foreground="#FFB84D"
-                                       Text="Restart Windows after installing VB-CABLE, then reopen AudioBridge." />
-                        </StackPanel>
-                    </StackPanel>
-                </Border>
-
-                <!-- Step 4: devices -->
+                <!-- Step 3: devices -->
                 <Border Style="{StaticResource CardPanel}">
                     <StackPanel>
-                        <TextBlock Style="{StaticResource Heading}" Text="4 · Audio devices" />
+                        <TextBlock Style="{StaticResource Heading}" Text="3 · Audio devices" />
 
                         <TextBlock Text="{Binding DeviceSectionLabel}" />
                         <ComboBox ItemsSource="{Binding RenderDevices}" DisplayMemberPath="Name"
@@ -113,6 +88,31 @@
                         <Button Style="{StaticResource LinkButton}" Content="Refresh device list"
                                 Command="{Binding RefreshDevicesCommand}" Margin="0,12,0,0"
                                 HorizontalAlignment="Left" />
+                    </StackPanel>
+                </Border>
+
+                <!-- Only the gaming PC needs this, so it sits outside the numbered steps. -->
+                <Border Style="{StaticResource CardPanel}"
+                        Visibility="{Binding NeedsCable, Converter={StaticResource BoolToVisibility}}">
+                    <StackPanel>
+                        <TextBlock Style="{StaticResource Heading}" Text="Virtual microphone" />
+                        <TextBlock Text="{Binding CableStatus}" />
+
+                        <StackPanel Visibility="{Binding CableMissing, Converter={StaticResource BoolToVisibility}}"
+                                    Margin="0,10,0,0">
+                            <TextBlock Style="{StaticResource Hint}"
+                                       Text="To make your streaming PC's microphone show up in games on this PC, Windows needs a virtual audio device. AudioBridge uses VB-CABLE for this." />
+                            <TextBlock Style="{StaticResource Hint}" Margin="0,8,0,0"
+                                       Text="{Binding CableAttribution}" />
+                            <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+                                <Button Style="{StaticResource LinkButton}" Content="Open vb-cable.com"
+                                        Click="OpenCableSite" Margin="0,0,16,0" />
+                                <Button Style="{StaticResource LinkButton}" Content="I've installed it — check again"
+                                        Command="{Binding RecheckCableCommand}" />
+                            </StackPanel>
+                            <TextBlock Style="{StaticResource Hint}" Margin="0,10,0,0" Foreground="#FFB84D"
+                                       Text="Restart Windows after installing VB-CABLE, then reopen AudioBridge." />
+                        </StackPanel>
                     </StackPanel>
                 </Border>
 

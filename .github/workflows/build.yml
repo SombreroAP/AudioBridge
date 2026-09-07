@@ -71,8 +71,17 @@ jobs:
           $graphics = [System.Drawing.Graphics]::FromImage($bitmap)
           $graphics.CopyFromScreen($bounds.Location, [System.Drawing.Point]::Empty, $bounds.Size)
           New-Item -ItemType Directory -Force -Path screenshots | Out-Null
-          $bitmap.Save("$PWD\screenshots\ui.png")
+          $bitmap.Save("$PWD\screenshots\ui-dropdown-open.png")
           Write-Host "Captured $($bounds.Width)x$($bounds.Height)"
+
+          # The open popup covers the controls beneath it, so capture the closed state too.
+          Add-Type -AssemblyName Microsoft.VisualBasic
+          [Microsoft.VisualBasic.Interaction]::AppActivate($process.Id)
+          Start-Sleep -Milliseconds 500
+          [System.Windows.Forms.SendKeys]::SendWait('{ESC}')
+          Start-Sleep -Seconds 2
+          $graphics.CopyFromScreen($bounds.Location, [System.Drawing.Point]::Empty, $bounds.Size)
+          $bitmap.Save("$PWD\screenshots\ui-closed.png")
 
           if (-not $process.HasExited) { Stop-Process -Id $process.Id -Force }
 
