@@ -85,8 +85,17 @@
                                       IsEnabled="{Binding IsIdle}" />
                         </StackPanel>
 
+                        <StackPanel Margin="0,14,0,0">
+                            <TextBlock Text="Latency" />
+                            <ComboBox ItemsSource="{Binding LatencyProfiles}"
+                                      SelectedItem="{Binding SelectedLatency, Mode=TwoWay}"
+                                      IsEnabled="{Binding IsIdle}" />
+                            <TextBlock Style="{StaticResource Hint}" Margin="0,6,0,0"
+                                       Text="Lower is more responsive but more likely to crackle if your network or CPU stutters. Both PCs should use the same setting." />
+                        </StackPanel>
+
                         <Button Style="{StaticResource LinkButton}" Content="Refresh device list"
-                                Command="{Binding RefreshDevicesCommand}" Margin="0,12,0,0"
+                                Command="{Binding RefreshDevicesCommand}" Margin="0,14,0,0"
                                 HorizontalAlignment="Left" />
                     </StackPanel>
                 </Border>

@@ -14,9 +14,10 @@ public sealed class WasapiRenderSink : IAudioRenderSink
     private readonly BufferedWaveProvider _buffer;
     private readonly MMDevice _device;
 
-    /// <param name="latencyMilliseconds">WASAPI's own buffer. Below about 20 ms shared-mode
-    /// playback starts to crackle on typical consumer hardware, so that is the floor the UI offers.</param>
-    public WasapiRenderSink(MMDevice device, AudioFormat format, int latencyMilliseconds = 30)
+    /// <param name="latencyMilliseconds">WASAPI's own buffer. How low this can go is a
+    /// property of the driver, not a constant, so a request the device rejects falls back
+    /// rather than failing to start.</param>
+    public WasapiRenderSink(MMDevice device, AudioFormat format, int latencyMilliseconds = 25)
     {
         _device = device;
         Format = format;
@@ -26,12 +27,34 @@ public sealed class WasapiRenderSink : IAudioRenderSink
             // Overflow means the network is ahead of the sound card. Dropping the newest
             // audio keeps latency bounded instead of letting it creep up all session.
             DiscardOnBufferOverflow = true,
-            BufferDuration = TimeSpan.FromMilliseconds(Math.Max(500, latencyMilliseconds * 4)),
+            BufferDuration = TimeSpan.FromMilliseconds(Math.Max(250, latencyMilliseconds * 4)),
         };
 
-        _output = new WasapiOut(device, AudioClientShareMode.Shared, useEventSync: true, latencyMilliseconds);
-        _output.Init(_buffer);
+        // Try the requested latency, then progressively safer ones. Shared-mode WASAPI
+        // below roughly 20 ms is fine on some hardware and refused outright on other, and
+        // the only way to find out is to ask.
+        foreach (var candidate in new[] { latencyMilliseconds, 30, 50, 100 }.Distinct().Order())
+        {
+            try
+            {
+                var output = new WasapiOut(device, AudioClientShareMode.Shared, useEventSync: true, candidate);
+                output.Init(_buffer);
+                _output = output;
+                ActualLatencyMs = candidate;
+                return;
+            }
+            catch (Exception)
+            {
+                // Too aggressive for this driver; try the next one up.
+            }
+        }
+
+        throw new InvalidOperationException(
+            $"{device.FriendlyName} would not accept any playback buffer size AudioBridge offered.");
     }
+
+    /// <summary>The buffer size the device actually accepted, which may be larger than asked for.</summary>
+    public int ActualLatencyMs { get; }
 
     public AudioFormat Format { get; }
 

@@ -18,8 +18,7 @@ public sealed class AppSettings
     public PeerRole Role { get; set; } = PeerRole.Unconfigured;
     public string? RenderDeviceId { get; set; }
     public string? CaptureDeviceId { get; set; }
-    public int JitterDepth { get; set; } = 3;
-    public int RenderLatencyMs { get; set; } = 30;
+    public string LatencyProfileName { get; set; } = LatencyProfile.Balanced.Name;
     public string? LastPeerAddress { get; set; }
 
     /// <summary>A stable identity for this install, so the other PC can tell a restart from a
@@ -59,12 +58,16 @@ public sealed class AppSettings
         }
     }
 
+    public LatencyProfile Latency => LatencyProfile.ByName(LatencyProfileName);
+
     public BridgeSettings ToBridgeSettings() => new()
     {
         Role = Role,
         RenderDeviceId = RenderDeviceId,
         CaptureDeviceId = CaptureDeviceId,
-        JitterDepth = JitterDepth,
-        RenderLatencyMs = RenderLatencyMs,
+        JitterDepth = Latency.JitterDepth,
+        RenderLatencyMs = Latency.RenderLatencyMs,
+        BlockMilliseconds = Latency.BlockMilliseconds,
+        MaxPlaybackBufferMs = Latency.MaxPlaybackBufferMs,
     };
 }

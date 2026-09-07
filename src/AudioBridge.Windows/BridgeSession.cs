@@ -19,11 +19,14 @@ public sealed record BridgeSettings
     public int JitterDepth { get; init; } = 3;
 
     /// <summary>WASAPI playback buffer, in milliseconds.</summary>
-    public int RenderLatencyMs { get; init; } = 30;
+    public int RenderLatencyMs { get; init; } = 25;
 
-    /// <summary>Audio capture block size. 10 ms is the sweet spot: small enough to keep
-    /// latency low, large enough that the packet rate stays reasonable.</summary>
-    public double BlockMilliseconds { get; init; } = 10;
+    /// <summary>Audio capture block size. Kept small enough to fit one datagram.</summary>
+    public double BlockMilliseconds { get; init; } = 5;
+
+    /// <summary>Ceiling on queued playback. Sender and receiver clocks are never exactly
+    /// equal, so without trimming, latency creeps upward across a long session.</summary>
+    public int MaxPlaybackBufferMs { get; init; } = 75;
 
     public ushort AudioPort { get; init; } = 47810;
 }
@@ -63,6 +66,9 @@ public sealed class BridgeSession : IAsyncDisposable
 
     public bool IsRunning => _running;
     public IPEndPoint? Peer { get; private set; }
+
+    /// <summary>Blocks dropped to stop playback latency drifting upward.</summary>
+    public long TrimmedBlocks { get; private set; }
 
     public event Action<string>? Failed;
 
@@ -118,6 +124,21 @@ public sealed class BridgeSession : IAsyncDisposable
             // Loopback-record the device the games are playing through.
             var device = WindowsAudioDevices.Resolve(_settings.RenderDeviceId, DataFlow.Render)
                 ?? throw new InvalidOperationException("No playback device to capture game audio from.");
+
+            // Installing VB-CABLE often makes CABLE Input the default playback device, so
+            // this is the setup a user lands on by accident. Capturing the device we render
+            // the incoming microphone into feeds it straight back to the other PC, which is
+            // heard as your own voice returning on a delay.
+            if (_virtualMic.InputEndpoint is not null && device.ID == _virtualMic.InputEndpoint.Id)
+            {
+                var name = device.FriendlyName;
+                device.Dispose();
+                throw new InvalidOperationException(
+                    $"\"{name}\" cannot be the device game audio is captured from -- it is the " +
+                    "virtual microphone AudioBridge plays into, so the audio would loop straight " +
+                    "back. Pick the speakers or headset your games actually play through.");
+            }
+
             return WasapiCaptureSource.Loopback(device, _format, _settings.BlockMilliseconds);
         }
 
@@ -147,10 +168,22 @@ public sealed class BridgeSession : IAsyncDisposable
             var wroteSomething = false;
             while (_receiver!.TryRead(InboundStream, out var packet))
             {
+                wroteSomething = true;
+
+                // The two PCs' sound cards run at slightly different real rates, so audio
+                // arrives fractionally faster than it plays and the backlog grows all
+                // session. Dropping a block once the queue is too deep holds latency at the
+                // profile's ceiling instead of letting it drift into seconds.
+                if (_render is WasapiRenderSink sink &&
+                    sink.BufferedDuration.TotalMilliseconds > _settings.MaxPlaybackBufferMs)
+                {
+                    TrimmedBlocks++;
+                    continue;
+                }
+
                 // A concealed packet carries no payload: play a block of silence so the
                 // stream keeps its timing instead of jumping forward.
                 _render!.Write(packet.Payload.IsEmpty ? _silence : packet.Payload.Span);
-                wroteSomething = true;
             }
 
             // Sleep only when the buffer ran dry, so a burst of packets drains in one pass.
@@ -167,7 +200,8 @@ public sealed class BridgeSession : IAsyncDisposable
             _sender?.PacketsSent ?? 0,
             _receiver?.PacketsReceived ?? 0,
             stats,
-            (_render as WasapiRenderSink)?.BufferedDuration ?? TimeSpan.Zero);
+            (_render as WasapiRenderSink)?.BufferedDuration ?? TimeSpan.Zero,
+            TrimmedBlocks);
     }
 
     public async Task StopAsync()
@@ -209,4 +243,5 @@ public readonly record struct BridgeStatus(
     long PacketsSent,
     long PacketsReceived,
     JitterBufferStats Jitter,
-    TimeSpan PlaybackBuffered);
+    TimeSpan PlaybackBuffered,
+    long TrimmedBlocks);

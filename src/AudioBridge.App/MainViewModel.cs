@@ -60,6 +60,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IAsyncDisposable
 
     public ObservableCollection<Peer> Peers { get; } = [];
     public ObservableCollection<AudioDeviceInfo> RenderDevices { get; } = [];
+    public IReadOnlyList<LatencyProfile> LatencyProfiles { get; } = LatencyProfile.All;
     public ObservableCollection<AudioDeviceInfo> CaptureDevices { get; } = [];
 
     public RelayCommand StartCommand { get; }
@@ -90,6 +91,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IAsyncDisposable
             _settings.Role = value;
             _settings.Save();
             if (_discovery is not null) _discovery.Role = value;
+            RefreshDevices();
             NotifyRoleDependentState();
         }
     }
@@ -129,6 +131,18 @@ public sealed class MainViewModel : INotifyPropertyChanged, IAsyncDisposable
     {
         get => _selectedPeer;
         set { if (Set(ref _selectedPeer, value)) StartCommand?.RaiseCanExecuteChanged(); }
+    }
+
+    public LatencyProfile SelectedLatency
+    {
+        get => _settings.Latency;
+        set
+        {
+            if (value is null || value.Name == _settings.LatencyProfileName) return;
+            _settings.LatencyProfileName = value.Name;
+            _settings.Save();
+            Notify();
+        }
     }
 
     public AudioDeviceInfo? SelectedRenderDevice
@@ -293,8 +307,9 @@ public sealed class MainViewModel : INotifyPropertyChanged, IAsyncDisposable
 
         var status = _session.GetStatus();
         var buffered = status.PlaybackBuffered.TotalMilliseconds;
-        Status = $"Connected to {status.Peer}  •  sent {status.PacketsSent:N0}  •  received {status.PacketsReceived:N0}  " +
-                 $"•  buffer {buffered:F0} ms  •  {status.Jitter.ConcealedPackets:N0} dropouts";
+        Status = $"Connected to {status.Peer}  •  latency ~{buffered:F0} ms  " +
+                 $"•  sent {status.PacketsSent:N0}  •  received {status.PacketsReceived:N0}  " +
+                 $"•  {status.Jitter.ConcealedPackets:N0} dropouts  •  {status.TrimmedBlocks:N0} trimmed";
     }
 
     /// <summary>
@@ -323,7 +338,17 @@ public sealed class MainViewModel : INotifyPropertyChanged, IAsyncDisposable
         try
         {
             RenderDevices.Clear();
-            foreach (var device in WindowsAudioDevices.GetRenderDevices()) RenderDevices.Add(device);
+            foreach (var device in WindowsAudioDevices.GetRenderDevices())
+            {
+                // On the gaming PC this list is what we loopback-record, and AudioBridge
+                // renders the incoming microphone into the cable. Offering the cable here
+                // lets the user pick the one device guaranteed to feed back on itself --
+                // and since installing VB-CABLE often makes it the Windows default, that is
+                // exactly where they land by accident. The streaming PC keeps it, where
+                // playing game audio into a cable for OBS is a normal thing to want.
+                if (Role == PeerRole.GamingPc && IsVirtualCable(device)) continue;
+                RenderDevices.Add(device);
+            }
             CaptureDevices.Clear();
             foreach (var device in WindowsAudioDevices.GetCaptureDevices()) CaptureDevices.Add(device);
             if (DemoMode) AddDemoContent();
@@ -345,6 +370,9 @@ public sealed class MainViewModel : INotifyPropertyChanged, IAsyncDisposable
         Status = message;
         if (added) Error = null;
     }
+
+    private bool IsVirtualCable(AudioDeviceInfo device) =>
+        _virtualMic.InputEndpoint is not null && device.Id == _virtualMic.InputEndpoint.Id;
 
     private void RecheckCable()
     {
@@ -373,7 +401,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IAsyncDisposable
         return true;
     }
 
-    private void Notify(string? propertyName) =>
+    private void Notify([CallerMemberName] string? propertyName = null) =>
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
 
     public async ValueTask DisposeAsync()
