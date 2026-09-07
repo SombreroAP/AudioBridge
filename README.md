@@ -51,6 +51,11 @@ artifact. That artifact is what goes to the Google Drive test folder.
 
 If the app ever fails at startup, it writes to `%LOCALAPPDATA%\AudioBridge\log.txt`.
 
+## License
+
+MIT, see [LICENSE](LICENSE). Third-party components are listed in [CREDITS.md](CREDITS.md);
+VB-CABLE is not covered by this license and stays under VB-Audio's own terms.
+
 ## Contact
 
 Questions, bugs, or ideas: [@smb_gg](https://x.com/smb_gg) on X.
