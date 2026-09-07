@@ -1,0 +1,10 @@
+<Project>
+  <PropertyGroup>
+    <!-- Lets the Windows-targeted projects restore and compile on macOS/Linux so the whole
+         solution stays buildable during development. Running still requires Windows. -->
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+  </PropertyGroup>
+</Project>
