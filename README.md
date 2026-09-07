@@ -50,3 +50,7 @@ is still alive with an open window 15 seconds after launch, and uploads the `.ex
 artifact. That artifact is what goes to the Google Drive test folder.
 
 If the app ever fails at startup, it writes to `%LOCALAPPDATA%\AudioBridge\log.txt`.
+
+## Contact
+
+Questions, bugs, or ideas: [@smb_gg](https://x.com/smb_gg) on X.
