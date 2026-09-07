@@ -1,25 +1,20 @@
 #!/usr/bin/env bash
-# Builds AudioBridge as a single self-contained Windows .exe and drops it in the shared
-# Google Drive folder for testing. Runs from macOS or Windows; no Windows machine needed
-# to produce the build, only to run it.
+# Compile-checks the whole solution and runs the tests on macOS/Linux.
+#
+# This deliberately does NOT produce a shippable .exe. EnableWindowsTargeting lets a WPF
+# project compile here, but the resulting binary does not run on Windows. The real build
+# happens on windows-latest in .github/workflows/build.yml, or via scripts/publish.ps1 on
+# a Windows machine.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-DRIVE="${AUDIOBRIDGE_DRIVE:-$HOME/Library/CloudStorage/GoogleDrive-<your-google-account>/My Drive/AudioBridge}"
+
+echo "==> Building"
+dotnet build "$ROOT" -c Release --nologo -v quiet
 
 echo "==> Testing"
 dotnet test "$ROOT" --nologo -v quiet
 
-echo "==> Publishing"
-rm -rf "$ROOT/publish"
-dotnet publish "$ROOT/src/AudioBridge.App" -c Release -r win-x64 --self-contained true -o "$ROOT/publish" --nologo -v quiet
-rm -f "$ROOT/publish"/*.pdb
-
-if [ -d "$DRIVE" ]; then
-  cp "$ROOT/publish/AudioBridge.exe" "$DRIVE/AudioBridge.exe"
-  echo "==> Copied to $DRIVE"
-else
-  echo "==> Google Drive folder not found at $DRIVE; skipping copy." >&2
-fi
-
-ls -lh "$ROOT/publish/AudioBridge.exe"
+echo
+echo "Compile and tests OK."
+echo "For a runnable .exe, use the GitHub Actions build or run scripts/publish.ps1 on Windows."
