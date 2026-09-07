@@ -40,6 +40,22 @@ jobs:
           Write-Host "Still running after 15s. Main window title: '$($process.MainWindowTitle)'"
           Stop-Process -Id $process.Id -Force
 
+          # Starting is not the same as starting cleanly. Errors are caught and shown in the
+          # UI rather than crashing, so a broken startup would otherwise pass this check.
+          $log = "$env:LOCALAPPDATA\AudioBridge\log.txt"
+          if (Test-Path $log) {
+            Write-Host "--- startup log ---"
+            Get-Content $log
+            $problems = Select-String -Path $log -Pattern 'Exception|Unhandled|failed' -AllMatches
+            if ($problems) {
+              Write-Error "AudioBridge logged errors during startup."
+              exit 1
+            }
+          } else {
+            Write-Error "No startup log was written; the app did not reach its logging code."
+            exit 1
+          }
+
       - uses: actions/upload-artifact@v4
         with:
           name: AudioBridge

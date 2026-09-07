@@ -35,6 +35,14 @@ public sealed class MainViewModel : INotifyPropertyChanged, IAsyncDisposable
         _role = _settings.Role;
         _manualAddress = _settings.LastPeerAddress ?? "";
 
+        // Commands first: refreshing devices raises CanExecuteChanged on them, so they have
+        // to exist before anything that can touch them runs.
+        StartCommand = new RelayCommand(async void () => await StartAsync(), () => !IsRunning && Role != PeerRole.Unconfigured);
+        StopCommand = new RelayCommand(async void () => await StopAsync(), () => IsRunning);
+        RefreshDevicesCommand = new RelayCommand(RefreshDevices);
+        RecheckCableCommand = new RelayCommand(RecheckCable);
+        AllowFirewallCommand = new RelayCommand(AllowFirewall);
+
         Log.Write("Enumerating audio devices.");
         RefreshDevices();
         Log.Write($"Found {RenderDevices.Count} playback and {CaptureDevices.Count} recording devices.");
@@ -42,11 +50,6 @@ public sealed class MainViewModel : INotifyPropertyChanged, IAsyncDisposable
                                 ?? RenderDevices.FirstOrDefault(d => d.IsDefault);
         _selectedCaptureDevice = CaptureDevices.FirstOrDefault(d => d.Id == _settings.CaptureDeviceId)
                                  ?? CaptureDevices.FirstOrDefault(d => d.IsDefault);
-
-        StartCommand = new RelayCommand(async void () => await StartAsync(), () => !IsRunning && Role != PeerRole.Unconfigured);
-        StopCommand = new RelayCommand(async void () => await StopAsync(), () => IsRunning);
-        RefreshDevicesCommand = new RelayCommand(RefreshDevices);
-        RecheckCableCommand = new RelayCommand(RecheckCable);
 
         _statusTimer = new DispatcherTimer(DispatcherPriority.Background) { Interval = TimeSpan.FromMilliseconds(500) };
         _statusTimer.Tick += (_, _) => UpdateStatus();
@@ -63,6 +66,17 @@ public sealed class MainViewModel : INotifyPropertyChanged, IAsyncDisposable
     public RelayCommand StopCommand { get; }
     public RelayCommand RefreshDevicesCommand { get; }
     public RelayCommand RecheckCableCommand { get; }
+    public RelayCommand AllowFirewallCommand { get; }
+
+    /// <summary>Shown so the user knows what to type on the other PC when discovery is blocked.</summary>
+    public string LocalAddresses
+    {
+        get
+        {
+            var addresses = NetworkTargets.LocalAddresses().Select(a => a.ToString()).Distinct().ToList();
+            return addresses.Count == 0 ? "(no network)" : string.Join(", ", addresses);
+        }
+    }
 
     public string CableAttribution => _virtualMic.Attribution;
     public string CableInstallUri => _virtualMic.InstallUri.ToString();
@@ -114,7 +128,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IAsyncDisposable
     public Peer? SelectedPeer
     {
         get => _selectedPeer;
-        set { if (Set(ref _selectedPeer, value)) StartCommand.RaiseCanExecuteChanged(); }
+        set { if (Set(ref _selectedPeer, value)) StartCommand?.RaiseCanExecuteChanged(); }
     }
 
     public AudioDeviceInfo? SelectedRenderDevice
@@ -150,7 +164,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IAsyncDisposable
     public string Status
     {
         get => _status;
-        private set => Set(ref _status, value);
+        set => Set(ref _status, value);
     }
 
     public string? Error
@@ -168,8 +182,8 @@ public sealed class MainViewModel : INotifyPropertyChanged, IAsyncDisposable
         {
             if (!Set(ref _isRunning, value)) return;
             Notify(nameof(IsIdle));
-            StartCommand.RaiseCanExecuteChanged();
-            StopCommand.RaiseCanExecuteChanged();
+            StartCommand?.RaiseCanExecuteChanged();
+            StopCommand?.RaiseCanExecuteChanged();
         }
     }
 
@@ -296,9 +310,18 @@ public sealed class MainViewModel : INotifyPropertyChanged, IAsyncDisposable
         catch (Exception ex)
         {
             // An unusual audio setup shouldn't stop the app opening; the user can retry.
-            Log.Write("Device enumeration failed", ex);
-            Error = $"Could not read this PC's audio devices: {ex.Message}";
+            Log.Write("Device refresh failed", ex);
+            Error = $"Could not load the audio device list: {ex.GetType().Name}: {ex.Message}. " +
+                    $"Details in {Log.FilePath}";
         }
+    }
+
+    private void AllowFirewall()
+    {
+        var added = FirewallRule.Add(47810, PeerDiscovery.DiscoveryPort, out var message);
+        Log.Write($"Firewall rule: {message}");
+        Status = message;
+        if (added) Error = null;
     }
 
     private void RecheckCable()
@@ -315,7 +338,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IAsyncDisposable
                      nameof(CableReady), nameof(CableStatus), nameof(DeviceSectionLabel), nameof(ShowCaptureDevice),
                  })
             Notify(property);
-        StartCommand.RaiseCanExecuteChanged();
+        StartCommand?.RaiseCanExecuteChanged();
     }
 
     public event PropertyChangedEventHandler? PropertyChanged;

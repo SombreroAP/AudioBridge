@@ -51,10 +51,18 @@
                         <TextBlock Style="{StaticResource Heading}" Text="2 · The other PC" />
                         <ComboBox ItemsSource="{Binding Peers}" SelectedItem="{Binding SelectedPeer, Mode=TwoWay}"
                                   IsEnabled="{Binding IsIdle}" />
-                        <TextBlock Style="{StaticResource Hint}" Margin="0,10,0,0"
-                                   Text="Not showing up? Your firewall may be blocking discovery. Type its IP address instead:" />
+                        <TextBlock Style="{StaticResource Hint}" Margin="0,12,0,0"
+                                   Text="Not showing up? Windows Firewall blocks the search by default. Click below on BOTH PCs, then wait a few seconds." />
+                        <Button Style="{StaticResource LinkButton}" Content="Allow AudioBridge through Windows Firewall"
+                                Command="{Binding AllowFirewallCommand}" HorizontalAlignment="Left" Margin="0,6,0,0" />
+
+                        <TextBlock Style="{StaticResource Hint}" Margin="0,12,0,0"
+                                   Text="Still nothing? Type the other PC's IP address here:" />
                         <TextBox Text="{Binding ManualAddress, UpdateSourceTrigger=PropertyChanged}"
                                  IsEnabled="{Binding IsIdle}" />
+                        <TextBlock Style="{StaticResource Hint}" Margin="0,6,0,0">
+                            <Run Text="This PC is at " /><Run Text="{Binding LocalAddresses, Mode=OneWay}" FontWeight="SemiBold" />
+                        </TextBlock>
                     </StackPanel>
                 </Border>
 

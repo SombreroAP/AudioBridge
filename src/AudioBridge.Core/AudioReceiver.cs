@@ -25,6 +25,7 @@ public sealed class AudioReceiver : IAsyncDisposable
     {
         _jitterDepth = jitterDepth;
         _socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
+        NetworkTargets.IgnoreConnectionReset(_socket);
         _socket.Bind(new IPEndPoint(IPAddress.Any, port));
     }
 

@@ -31,7 +31,7 @@ public sealed class PeerDiscovery : IAsyncDisposable
         MachineName = machineName;
         AudioPort = audioPort;
         Role = role;
-        _interval = interval ?? TimeSpan.FromSeconds(1);
+        _interval = interval ?? TimeSpan.FromSeconds(2);
         // A peer is gone after it misses several beacons; one dropped broadcast is normal.
         _table = new PeerTable(instanceId, _interval * 5);
 
@@ -40,6 +40,7 @@ public sealed class PeerDiscovery : IAsyncDisposable
         // instances must not fight over the port during development.
         _socket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
         _socket.EnableBroadcast = true;
+        NetworkTargets.IgnoreConnectionReset(_socket);
         _socket.Bind(new IPEndPoint(IPAddress.Any, DiscoveryPort));
     }
 
@@ -70,16 +71,22 @@ public sealed class PeerDiscovery : IAsyncDisposable
         using var timer = new PeriodicTimer(_interval);
         do
         {
-            var beacon = new DiscoveryBeacon(_instanceId, MachineName, AudioPort, Role);
-            try
+            var payload = new DiscoveryBeacon(_instanceId, MachineName, AudioPort, Role).ToArray();
+
+            // Recomputed every tick so adapters appearing or disappearing (VPN connecting,
+            // cable plugged in) are picked up without a restart.
+            foreach (var target in NetworkTargets.BroadcastTargets())
             {
-                _socket.SendTo(beacon.ToArray(), new IPEndPoint(IPAddress.Broadcast, DiscoveryPort));
+                try
+                {
+                    _socket.SendTo(payload, new IPEndPoint(target, DiscoveryPort));
+                }
+                catch (SocketException)
+                {
+                    // One adapter refusing is normal; keep trying the others.
+                }
+                catch (ObjectDisposedException) { return; }
             }
-            catch (SocketException)
-            {
-                // Interface down, VPN reshuffling adapters, etc. Try again next tick.
-            }
-            catch (ObjectDisposedException) { return; }
 
             ExpireQuietPeers();
         }
