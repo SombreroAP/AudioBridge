@@ -1,0 +1,8 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/AudioBridge.Core/AudioBridge.Core.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/AudioBridge.Core.Tests/AudioBridge.Core.Tests.csproj" />
+  </Folder>
+</Solution>
