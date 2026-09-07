@@ -30,11 +30,14 @@ public sealed class MainViewModel : INotifyPropertyChanged, IAsyncDisposable
     public MainViewModel()
     {
         _dispatcher = Dispatcher.CurrentDispatcher;
+        Log.Write($"Loading settings from {AppSettings.FilePath}");
         _settings = AppSettings.Load();
         _role = _settings.Role;
         _manualAddress = _settings.LastPeerAddress ?? "";
 
+        Log.Write("Enumerating audio devices.");
         RefreshDevices();
+        Log.Write($"Found {RenderDevices.Count} playback and {CaptureDevices.Count} recording devices.");
         _selectedRenderDevice = RenderDevices.FirstOrDefault(d => d.Id == _settings.RenderDeviceId)
                                 ?? RenderDevices.FirstOrDefault(d => d.IsDefault);
         _selectedCaptureDevice = CaptureDevices.FirstOrDefault(d => d.Id == _settings.CaptureDeviceId)
@@ -197,6 +200,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IAsyncDisposable
         {
             // Almost always the firewall or another instance holding the port. The app is
             // still usable with a manually typed address, so don't treat this as fatal.
+            Log.Write("Discovery unavailable", ex);
             Error = $"Automatic discovery is unavailable ({ex.Message}). Type the other PC's IP address instead.";
         }
     }
@@ -245,6 +249,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IAsyncDisposable
         }
         catch (Exception ex)
         {
+            Log.Write("Failed to start the bridge", ex);
             Error = ex.Message;
             if (_session is not null) await _session.DisposeAsync();
             _session = null;
@@ -280,11 +285,20 @@ public sealed class MainViewModel : INotifyPropertyChanged, IAsyncDisposable
 
     private void RefreshDevices()
     {
-        RenderDevices.Clear();
-        foreach (var device in WindowsAudioDevices.GetRenderDevices()) RenderDevices.Add(device);
-        CaptureDevices.Clear();
-        foreach (var device in WindowsAudioDevices.GetCaptureDevices()) CaptureDevices.Add(device);
-        RecheckCable();
+        try
+        {
+            RenderDevices.Clear();
+            foreach (var device in WindowsAudioDevices.GetRenderDevices()) RenderDevices.Add(device);
+            CaptureDevices.Clear();
+            foreach (var device in WindowsAudioDevices.GetCaptureDevices()) CaptureDevices.Add(device);
+            RecheckCable();
+        }
+        catch (Exception ex)
+        {
+            // An unusual audio setup shouldn't stop the app opening; the user can retry.
+            Log.Write("Device enumeration failed", ex);
+            Error = $"Could not read this PC's audio devices: {ex.Message}";
+        }
     }
 
     private void RecheckCable()

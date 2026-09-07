@@ -1,0 +1,46 @@
+name: Build Windows executable
+
+# WPF apps must be built on Windows. Development happens on macOS, where the solution
+# compiles but cannot produce a working binary, so the shippable .exe is always built here.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Test
+        run: dotnet test --nologo
+
+      - name: Publish
+        run: dotnet publish src/AudioBridge.App -c Release -r win-x64 --self-contained true -o publish --nologo
+
+      - name: Check the executable actually starts
+        shell: pwsh
+        run: |
+          # A WPF app has no console, so a startup crash is silent. Launch it, give it a
+          # moment, and confirm the process is still alive and has opened a window.
+          $process = Start-Process -FilePath publish\AudioBridge.exe -PassThru
+          Start-Sleep -Seconds 15
+          if ($process.HasExited) {
+            Write-Error "AudioBridge exited on startup with code $($process.ExitCode)."
+            $log = "$env:LOCALAPPDATA\AudioBridge\log.txt"
+            if (Test-Path $log) { Write-Host "--- log ---"; Get-Content $log }
+            exit 1
+          }
+          $process.Refresh()
+          Write-Host "Still running after 15s. Main window title: '$($process.MainWindowTitle)'"
+          Stop-Process -Id $process.Id -Force
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: AudioBridge
+          path: publish/AudioBridge.exe
